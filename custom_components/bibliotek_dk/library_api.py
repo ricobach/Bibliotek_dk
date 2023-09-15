@@ -112,32 +112,37 @@ class Library:
 
     #### PRIVATE BEGIN ####
     # Retrieve a webpage with either GET/POST
-    def _fetchPage(self, url=str, payload=None, return_r=False) -> BS | tuple:
-        try:
-            # If payload, use POST
-            if payload:
-                r = self.session.post(url, data=payload)
+    # Retrieve a webpage with either GET/POST
+def _fetchPage(self, url=str, payload=None, return_r=False) -> BS | tuple:
+    try:
+        # If payload, use POST
+        if payload:
+            r = self.session.post(url, data=payload)
+        # else use GET
+        else:
+            r = self.session.get(url)
 
-            # else use GET
-            else:
-                r = self.session.get(url)
+        r.raise_for_status()
 
-            r.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        _LOGGER.error(f"HTTP Error while fetching {url}: {err}")
+        # Handle the error as needed, e.g., raise it, log it, or notify the user.
+        return None if return_r else None, None
+    except requests.exceptions.Timeout:
+        _LOGGER.error(f"Timeout while fetching {url}")
+        return None if return_r else None, None
+    except requests.exceptions.TooManyRedirects:
+        _LOGGER.error(f"Too many redirects while fetching {url}")
+        return None if return_r else None, None
+    except requests.exceptions.RequestException as err:
+        _LOGGER.error(f"Request Exception while fetching {url}: {err}")
+        return None if return_r else None, None
 
-        except requests.exceptions.HTTPError as err:
-            raise SystemExit(err) from err
-        except requests.exceptions.Timeout:
-            _LOGGER.error("Timeout fecthing (%s)", url)
-        except requests.exceptions.TooManyRedirects:
-            _LOGGER.error("Too many redirects fecthing (%s)", url)
-        except requests.exceptions.RequestException as err:
-            raise SystemExit(err) from err
+    if return_r:
+        return BS(r.text, "html.parser"), r
 
-        if return_r:
-            return BS(r.text, "html.parser"), r
-
-        # Return HTML soup
-        return BS(r.text, "html.parser")
+    # Return HTML soup
+    return BS(r.text, "html.parser")
 
     # Search for given string in the HTML soup
     def _titleInSoup(self, soup, string) -> bool:
